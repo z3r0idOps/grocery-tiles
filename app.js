@@ -2,7 +2,7 @@
   "use strict";
 
   var STORAGE_KEY = "groceryTiles.v1";
-  var CURRENT_VERSION = 1;
+  var CURRENT_VERSION = 2;
 
   var SEED_POOL = [
     ["Produce", ["Bananas", "Apples", "Tomatoes", "Onions", "Potatoes", "Carrots", "Lettuce", "Avocado"]],
@@ -28,7 +28,8 @@
         pool.push({ id: slugify(name), name: name, category: category });
       });
     });
-    return { version: CURRENT_VERSION, pool: pool, list: [], notes: "" };
+    // seed is the v1 catalog; migrations bring it up to date
+    return migrate({ version: 1, pool: pool, list: [], notes: "" });
   }
 
   function isValidState(state) {
@@ -41,8 +42,28 @@
     });
   }
 
+  // v2: new standard catalog items. Runs once per saved state, so items you
+  // delete later stay deleted. Skips anything already in the catalog by name.
+  var V2_ADDITIONS = [
+    ["Dairy", "Oat Milk"],
+    ["Produce", "Oranges"],
+    ["Produce", "Cucumber"],
+    ["Bakery", "Croissants"],
+    ["Pantry", "Balsamico"],
+    ["Pantry", "Potato Chips"],
+    ["Pantry", "Chocolate"]
+  ];
+
   var MIGRATIONS = {
-    // 1 -> 2 would go here in the future
+    1: function (s) {
+      V2_ADDITIONS.forEach(function (item) {
+        var exists = s.pool.some(function (t) {
+          return t.name.toLowerCase() === item[1].toLowerCase();
+        });
+        if (!exists) s.pool.push({ id: slugify(item[1]), name: item[1], category: item[0] });
+      });
+      return s;
+    }
   };
 
   function migrate(state) {
@@ -85,6 +106,7 @@
   }
 
   var state = load();
+  save();
   var currentView = "catalog";
   var addingTile = false;
   var pendingDeleteId = null;
@@ -210,6 +232,98 @@
     save();
   }
 
+  // ---- Paste-a-list import ----
+
+  var IMPORT_MAX_LEN = 40;
+  var UNITS = "x|×|stk\\.?|stück|stueck|st\\.|g|kg|mg|ml|cl|l|liter|pck\\.?|pkg\\.?|packungen?|pack|dosen?|flaschen?|gläser|glas|beutel|bund|becher|tüten?|kisten?|kasten|rollen?|scheiben";
+  var LEADING_QTY = new RegExp("^\\d+(?:[.,]\\d+)?\\s*(?:" + UNITS + ")?\\.?\\s+(?:von\\s+)?", "i");
+  var TRAILING_QTY = new RegExp("\\s*[(\\[]?\\s*(?:\\d+(?:[.,]\\d+)?\\s*(?:" + UNITS + ")|[x×]\\s*\\d+)\\s*[)\\]]?\\s*$", "i");
+
+  // strips bullets, checkboxes, numbering and quantities; returns "" for headers/noise
+  function cleanImportLine(line) {
+    var s = line.trim();
+    if (!s || /:$/.test(s)) return "";
+
+    var prev;
+    do {
+      prev = s;
+      s = s.replace(/^(?:[-–—•*·▪▫■□☐☑✅✓✔●○▢]|\[[ xX✓]?\]|\(?\d+[.)])\s*/, "");
+    } while (s !== prev);
+
+    s = s.replace(/^[x×]\s*\d+\s+/i, "");
+    s = s.replace(LEADING_QTY, "");
+    s = s.replace(TRAILING_QTY, "");
+    s = s.replace(/^[\s"'„“”‚‘’]+|[\s"'„“”‚‘’:;,.!]+$/g, "").replace(/\s+/g, " ");
+
+    return /[A-Za-zÀ-ÿ]/.test(s) ? s : "";
+  }
+
+  function parseImportText(text) {
+    // one item per line; a line can also hold several items ("Paprika, Zwiebeln; Butter")
+    var lines = text.split(/\r?\n/).reduce(function (acc, line) {
+      return acc.concat(line.split(/;|,\s/));
+    }, []);
+    return lines.map(cleanImportLine).filter(Boolean);
+  }
+
+  function findPoolTileByName(name) {
+    var key = name.toLowerCase();
+    for (var i = 0; i < state.pool.length; i++) {
+      if (state.pool[i].name.toLowerCase() === key) return state.pool[i];
+    }
+    return null;
+  }
+
+  function importItems(text) {
+    var items = parseImportText(text);
+    var result = { total: items.length, added: 0, already: 0, created: 0, changes: [] };
+    var seen = {};
+
+    items.forEach(function (orig) {
+      var t = window.GroceryDict ? window.GroceryDict.translate(orig) : { name: orig, category: "" };
+      var name = t.name.slice(0, IMPORT_MAX_LEN).trim();
+      if (!name || seen[name.toLowerCase()]) return;
+      seen[name.toLowerCase()] = true;
+
+      var tile = findPoolTileByName(name);
+      if (!tile) {
+        tile = { id: makeCustomId(), name: name, category: t.category || "Other" };
+        state.pool.push(tile);
+        result.created++;
+      }
+
+      if (listEntryById(tile.id)) {
+        result.already++;
+      } else {
+        state.list.push({ id: tile.id, collected: false });
+        result.added++;
+      }
+
+      if (orig.toLowerCase() !== name.toLowerCase()) result.changes.push(orig + " → " + name);
+    });
+
+    if (result.added || result.created) save();
+    return result;
+  }
+
+  function renderImportResult(result) {
+    var box = document.getElementById("importResult");
+    box.innerHTML = "";
+    if (!result) return;
+
+    if (result.total === 0) {
+      box.appendChild(el("div", "import-summary", "Nothing to add. Paste one item per line."));
+      return;
+    }
+
+    var parts = ["Added " + result.added + " to your list"];
+    if (result.created) parts.push(result.created + " new " + (result.created === 1 ? "tile" : "tiles") + " in the catalog");
+    if (result.already) parts.push(result.already + " already on the list");
+    box.appendChild(el("div", "import-summary", parts.join(" · ")));
+
+    result.changes.forEach(function (c) { box.appendChild(el("div", "", c)); });
+  }
+
   function uncheckAll() {
     state.list.forEach(function (e) { e.collected = false; });
     save();
@@ -252,6 +366,11 @@
     var categories = CATEGORY_ORDER.filter(function (c) { return byCategory[c] && byCategory[c].length; });
     Object.keys(byCategory).forEach(function (c) {
       if (categories.indexOf(c) === -1) categories.push(c);
+    });
+
+    // keep each category alphabetical, whatever order tiles were added/moved in
+    categories.forEach(function (c) {
+      byCategory[c].sort(function (a, b) { return a.name.localeCompare(b.name); });
     });
 
     categories.forEach(function (category) {
@@ -586,6 +705,15 @@
       pendingUncheckId = null;
       renderList();
     }
+  });
+
+  document.getElementById("importBtn").addEventListener("click", function () {
+    var input = document.getElementById("importText");
+    var result = importItems(input.value);
+    if (result.total > 0) input.value = "";
+    pendingDeleteId = null;
+    renderAll();
+    renderImportResult(result);
   });
 
   var notesEl = document.getElementById("notes");

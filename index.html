@@ -28,6 +28,15 @@
 <main>
   <section id="viewCatalog" class="view">
     <div id="catalogGroups"></div>
+
+    <div class="import">
+      <h3 class="category-title">Paste a list</h3>
+      <textarea id="importText" class="notes paste-box" rows="4"
+        placeholder="Paste a list from another app, one item per line. German is translated to English."
+        aria-label="Paste a shopping list"></textarea>
+      <button class="import-btn" id="importBtn">Add to list</button>
+      <div id="importResult" class="import-result"></div>
+    </div>
   </section>
 
   <section id="viewList" class="view hidden">
@@ -38,6 +47,7 @@
   </section>
 </main>
 
+<script src="dictionary.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
