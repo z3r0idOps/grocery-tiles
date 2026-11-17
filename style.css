@@ -289,6 +289,32 @@ main {
   outline: none;
 }
 
+.notes {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.4;
+  resize: none;
+  overflow: hidden;
+}
+
+.notes::placeholder {
+  color: var(--text-dim);
+}
+
+.notes:focus {
+  outline: none;
+  border-color: var(--todo);
+}
+
 .list-controls {
   display: flex;
   align-items: center;

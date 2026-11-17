@@ -28,7 +28,7 @@
         pool.push({ id: slugify(name), name: name, category: category });
       });
     });
-    return { version: CURRENT_VERSION, pool: pool, list: [] };
+    return { version: CURRENT_VERSION, pool: pool, list: [], notes: "" };
   }
 
   function isValidState(state) {
@@ -68,6 +68,7 @@
       return freshState();
     }
     if (!isValidState(parsed)) return freshState();
+    if (typeof parsed.notes !== "string") parsed.notes = "";
     return migrate(parsed);
   }
 
@@ -587,5 +588,23 @@
     }
   });
 
+  var notesEl = document.getElementById("notes");
+
+  function autosizeNotes() {
+    notesEl.style.height = "auto";
+    notesEl.style.height = notesEl.scrollHeight + 2 + "px";
+  }
+
+  notesEl.value = state.notes;
+  notesEl.addEventListener("input", function () {
+    state.notes = notesEl.value;
+    save();
+    autosizeNotes();
+  });
+
   renderAll();
+  autosizeNotes();
+
+  // the textarea is hidden until the Shopping List tab opens, so resize then
+  document.getElementById("tabList").addEventListener("click", autosizeNotes);
 })();
