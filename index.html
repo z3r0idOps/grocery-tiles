@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Grocery Tiles</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#121417">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Groceries">
+</head>
+<body>
+<header class="topbar">
+  <h1 class="app-title">Grocery Tiles</h1>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" id="tabCatalog" role="tab" aria-selected="true">Catalog</button>
+    <button class="tab" id="tabList" role="tab" aria-selected="false">
+      Shopping List
+      <span class="badge" id="listCount"></span>
+    </button>
+  </nav>
+</header>
+
+<main>
+  <section id="viewCatalog" class="view">
+    <div id="catalogGroups"></div>
+  </section>
+
+  <section id="viewList" class="view hidden">
+    <div class="list-controls" id="listControls"></div>
+    <div id="listGroups"></div>
+    <p id="listEmpty" class="empty-msg hidden">Your list is empty. Add items from the Catalog tab.</p>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
