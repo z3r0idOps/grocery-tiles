@@ -41,6 +41,11 @@
 
   <section id="viewList" class="view hidden">
     <textarea id="notes" class="notes" rows="2" placeholder="Notes…" aria-label="Shopping notes"></textarea>
+    <div class="progress hidden" id="progress" role="progressbar" aria-label="Items in cart"
+         aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="progress-fill" id="progressFill"></div>
+      <span class="progress-label" id="progressLabel">0%</span>
+    </div>
     <div class="list-controls" id="listControls"></div>
     <div id="listGroups"></div>
     <p id="listEmpty" class="empty-msg hidden">Your list is empty. Add items from the Catalog tab.</p>

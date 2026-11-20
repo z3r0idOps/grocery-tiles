@@ -479,10 +479,24 @@
     container.appendChild(clearBtn);
   }
 
+  function renderProgress() {
+    var bar = document.getElementById("progress");
+    var total = state.list.length;
+    bar.classList.toggle("hidden", total === 0);
+    if (total === 0) return;
+
+    var done = state.list.filter(function (e) { return e.collected; }).length;
+    var pct = Math.round((done / total) * 100);
+    document.getElementById("progressFill").style.width = pct + "%";
+    document.getElementById("progressLabel").textContent = pct + "%";
+    bar.setAttribute("aria-valuenow", String(pct));
+  }
+
   function renderList() {
     var container = document.getElementById("listGroups");
     var emptyMsg = document.getElementById("listEmpty");
     container.innerHTML = "";
+    renderProgress();
 
     if (state.list.length === 0) {
       emptyMsg.classList.remove("hidden");
